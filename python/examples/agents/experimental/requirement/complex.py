@@ -3,7 +3,6 @@ import math
 
 from beeai_framework.agents.experimental import RequirementAgent
 from beeai_framework.agents.experimental.prompts import (
-    RequirementAgentCycleDetectionPrompt,
     RequirementAgentSystemPrompt,
     RequirementAgentTaskPrompt,
     RequirementAgentToolErrorPrompt,
@@ -42,8 +41,8 @@ class RepeatIfEmptyRequirement(Requirement[RequirementAgentRunState]):
             raise ValueError(f"No tool of type {self._target_cls.__name__} found!")
 
     @run_with_context
-    async def run(self, input: RequirementAgentRunState, ctx: RunContext) -> list[Rule]:
-        last_step = input.steps[-1] if input.steps else None
+    async def run(self, state: RequirementAgentRunState, ctx: RunContext) -> list[Rule]:
+        last_step = state.steps[-1] if state.steps else None
         if last_step and last_step.tool in self._targets and last_step.output.is_empty():
             self._remaining -= 1
             return [Rule(target=last_step.tool.name, forced=True)]
@@ -70,12 +69,11 @@ async def main() -> None:
         ],
         save_intermediate_steps=True,  # store tool calls between individual starts (default: true)
         tool_call_checker=True,  # detects and resolve cycles (default: true)
-        final_answer_as_tool=True,  # produces the final answer as a tool call (default: true)
+        final_answer_as_tool=False,  # produces the final answer as a tool call (default: true)
         memory=UnconstrainedMemory(),
         templates=RequirementAgentTemplates(
             system=RequirementAgentSystemPrompt,
             task=RequirementAgentTaskPrompt,
-            cycle_detection=RequirementAgentCycleDetectionPrompt,
             tool_error=RequirementAgentToolErrorPrompt,
             tool_no_result=RequirementAgentToolNoResultPrompt,
         ),
@@ -88,7 +86,7 @@ async def main() -> None:
         expected_output="Detailed plan on what to do from morning to evening, split in sections each with a time range.",
     ).middleware(GlobalTrajectoryMiddleware())
 
-    print(response.result.text)
+    print(response.answer.text)
     # print(response.memory)  # temp memory created
     # print(response.state.iteration)  # number of iterations (steps)
     # print(response.state.steps)  # individual steps

@@ -67,6 +67,19 @@ poetry self add poetry-plugin-shell
 > [!IMPORTANT]
 > You must have poetry >= 2.0 installed
 
+#### Poe
+
+[Poe](https://poethepoet.natn.io/index.html) is a batteries-included task runner that integrates seamlessly with both Poetry and uv. It allows you to define project tasks directly in your `pyproject.toml` file and provides a simple way to run them using your project’s virtual environment—either via a standalone CLI or as a Poetry plugin.
+
+To install Poe, use:
+
+```bash
+pipx install poethepoet
+```
+
+For more details, see the [official installation guide](https://poethepoet.natn.io/installation.html#install-the-cli-globally-recommended).
+
+---
 ### Clone and set up the code
 
 Follow these steps:
@@ -170,7 +183,6 @@ poe test --type e2e
 - `poe build`
 - `poe commit`
 - `poe copyright` and `poe copyright --type check`
-- `poe docs --type build` and `poe docs --type check`
 
 #### Follow Conventional Commit Messages
 
@@ -196,21 +208,18 @@ Ref: #15
 
 - commit: for convenience you can use the following command to sign-off your commit with `-s` and generate the commit.
 
-```bash
+```bash[README.md](../typescript/README.md)
 poe commit "<type>(<scope>): <subject>"
 ```
 
 By following these steps, you'll be all set to contribute to our project! If you encounter any issues during the setup process, please feel free to open an issue.
 
-## Updating examples and embedding
+# Documentation
 
-Currently [embedme](https://github.com/zakhenry/embedme) is used to embed code examples directly in documentation. Supported file types can be found [here](https://github.com/zakhenry/embedme?tab=readme-ov-file#multi-language).
+The BeeAI Framework documentation automatically generates code snippets from the source files located in the examples directory.
+If you want to make changes to the documentation, or if you have updated any example files, you must regenerate the documentation to ensure it reflects the latest changes.
 
-Once an example is edited or a new one is created and referenced running the following command will update the documentation.
-
-```bash
-poe docs --type build
-```
+[Learn more about the documentation](/docs/README.md).
 
 ## Legal
 
