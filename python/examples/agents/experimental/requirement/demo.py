@@ -15,13 +15,15 @@ async def main() -> None:
         tools=[ThinkTool(), OpenMeteoTool(), DuckDuckGoSearchTool()],
         instructions="Plan activities for a given destination based on current weather and events.",
         requirements=[
-            ConditionalRequirement(ThinkTool, force_at_step=1),
-            ConditionalRequirement(DuckDuckGoSearchTool, only_after=[OpenMeteoTool], min_invocations=1),
+            ConditionalRequirement(ThinkTool, force_at_step=1, max_invocations=3),
+            ConditionalRequirement(
+                DuckDuckGoSearchTool, only_after=[OpenMeteoTool], min_invocations=1, max_invocations=2
+            ),
         ],
     )
 
     response = await agent.run("What to do in Boston?").middleware(GlobalTrajectoryMiddleware(excluded=[]))
-    print(response.result.text)
+    print(response.answer.text)
 
 
 if __name__ == "__main__":

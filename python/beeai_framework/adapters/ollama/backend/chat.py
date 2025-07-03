@@ -18,6 +18,7 @@ from typing import ClassVar
 from typing_extensions import Unpack
 
 from beeai_framework.adapters.litellm.chat import LiteLLMChatModel
+from beeai_framework.adapters.litellm.utils import parse_extra_headers
 from beeai_framework.backend.chat import ChatModelKwargs
 from beeai_framework.backend.constants import ProviderName
 from beeai_framework.logger import Logger
@@ -38,11 +39,12 @@ class OllamaChatModel(LiteLLMChatModel):
         *,
         api_key: str | None = None,
         base_url: str | None = None,
+        text_completion: bool | None = False,
         **kwargs: Unpack[ChatModelKwargs],
     ) -> None:
         super().__init__(
             model_id if model_id else os.getenv("OLLAMA_CHAT_MODEL", "llama3.1"),
-            provider_id="openai",
+            provider_id="text-completion-openai" if text_completion else "openai",
             **kwargs,
         )
 
@@ -52,3 +54,7 @@ class OllamaChatModel(LiteLLMChatModel):
         )
         if not self._settings["base_url"].endswith("/v1"):
             self._settings["base_url"] += "/v1"
+
+        self._settings["extra_headers"] = parse_extra_headers(
+            self._settings.get("extra_headers"), os.getenv("OLLAMA_API_HEADERS")
+        )

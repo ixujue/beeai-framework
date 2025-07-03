@@ -13,13 +13,12 @@
 # limitations under the License.
 
 from collections.abc import Callable
-from typing import Annotated, Any
+from typing import Annotated, Any, Generic
 
 from pydantic import BaseModel, ConfigDict, Field, InstanceOf
+from typing_extensions import TypeVar
 
 from beeai_framework.agents.experimental.prompts import (
-    RequirementAgentCycleDetectionPrompt,
-    RequirementAgentCycleDetectionPromptInput,
     RequirementAgentSystemPrompt,
     RequirementAgentSystemPromptInput,
     RequirementAgentTaskPrompt,
@@ -32,6 +31,7 @@ from beeai_framework.agents.experimental.prompts import (
 from beeai_framework.agents.experimental.utils._tool import FinalAnswerTool
 from beeai_framework.backend import (
     AssistantMessage,
+    UserMessage,
 )
 from beeai_framework.backend.types import ChatModelToolChoice
 from beeai_framework.errors import FrameworkError
@@ -50,9 +50,6 @@ class RequirementAgentTemplates(BaseModel):
     tool_error: InstanceOf[PromptTemplate[RequirementAgentToolErrorPromptInput]] = Field(
         default_factory=lambda: RequirementAgentToolErrorPrompt.fork(None),
     )
-    cycle_detection: InstanceOf[PromptTemplate[RequirementAgentCycleDetectionPromptInput]] = Field(
-        default_factory=lambda: RequirementAgentCycleDetectionPrompt.fork(None),
-    )
     tool_no_result: InstanceOf[PromptTemplate[RequirementAgentToolNoResultTemplateInput]] = Field(
         default_factory=lambda: RequirementAgentToolNoResultPrompt.fork(None),
     )
@@ -67,22 +64,49 @@ class RequirementAgentRunStateStep(BaseModel):
 
     iteration: int
     tool: InstanceOf[Tool[Any, Any, Any]] | None
-    input: dict[str, Any]
+    input: Any
     output: InstanceOf[ToolOutput]
     error: InstanceOf[FrameworkError] | None
 
 
 class RequirementAgentRunState(BaseModel):
-    result: InstanceOf[AssistantMessage] | None = None
+    answer: InstanceOf[AssistantMessage] | None = None
+    result: Any  # TODO
     memory: InstanceOf[BaseMemory]
     iteration: int
     steps: list[RequirementAgentRunStateStep] = []
 
+    @property
+    def input(self) -> UserMessage:
+        """Get the last user message."""
 
-class RequirementAgentRunOutput(BaseModel):
-    result: InstanceOf[AssistantMessage]
+        return next(msg for msg in reversed(self.memory.messages) if isinstance(msg, UserMessage))
+
+
+TAnswer = TypeVar("TAnswer", bound=BaseModel, default=Any)
+
+
+class RequirementAgentRunOutput(BaseModel, Generic[TAnswer]):
+    answer: InstanceOf[AssistantMessage]
+    answer_structured: TAnswer
     memory: InstanceOf[BaseMemory]
     state: RequirementAgentRunState
+
+    @property
+    def result(self) -> AssistantMessage:
+        """
+        This property is provided for compatibility reasons only.
+        Use 'answer' instead.
+        """
+        return self.answer
+
+    @result.setter
+    def result(self, value: AssistantMessage) -> None:
+        """
+        This setter is provided for compatibility reasons only.
+        Sets the 'answer' attribute.
+        """
+        self.answer = value
 
 
 class RequirementAgentRequest(BaseModel):

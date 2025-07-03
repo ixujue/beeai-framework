@@ -18,6 +18,8 @@ import { CustomMessage, Role, UserMessage } from "@/backend/message.js";
 import { isPlainObject, isString, isTruthy } from "remeda";
 import { getProp } from "@/internals/helpers/object.js";
 import { TextPart } from "ai";
+import { z } from "zod";
+import { parseEnv } from "@/internals/env.js";
 
 export function encodeCustomMessage(msg: CustomMessage): UserMessage {
   return new UserMessage([
@@ -69,8 +71,8 @@ export function vercelFetcher(customFetch?: typeof fetch): typeof fetch {
     if (
       options &&
       isString(options.body) &&
-      (getProp(options.headers, ["content-type"]) == "application/json" ||
-        getProp(options.headers, ["Content-Type"]) == "application/json")
+      (getProp(options.headers, ["content-type"]) === "application/json" ||
+        getProp(options.headers, ["Content-Type"]) === "application/json")
     ) {
       const body = JSON.parse(options.body);
       if (isPlainObject(body) && Array.isArray(body.messages)) {
@@ -87,4 +89,18 @@ export function vercelFetcher(customFetch?: typeof fetch): typeof fetch {
     const fetcher = customFetch ?? fetch;
     return await fetcher(url, options);
   };
+}
+
+export function parseHeadersFromEnv(env: string): Record<string, any> {
+  return parseEnv(
+    env,
+    z.preprocess((value) => {
+      return Object.fromEntries(
+        String(value || "")
+          .split(",")
+          .filter((pair) => pair.includes("="))
+          .map((pair) => pair.split("=")),
+      );
+    }, z.record(z.string())),
+  );
 }

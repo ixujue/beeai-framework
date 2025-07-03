@@ -1,7 +1,6 @@
 import asyncio
 
 from beeai_framework.agents.experimental import RequirementAgent
-from beeai_framework.agents.experimental.requirements import Requirement
 from beeai_framework.agents.experimental.requirements.conditional import ConditionalRequirement
 from beeai_framework.backend import ChatModel
 from beeai_framework.middleware.trajectory import GlobalTrajectoryMiddleware
@@ -18,8 +17,8 @@ async def main() -> None:
         requirements=[ConditionalRequirement(ThinkTool, force_at_step=1, force_after=Tool, consecutive_allowed=False)],
     )
 
-    response = await agent.run("What to do in Boston?").middleware(GlobalTrajectoryMiddleware(excluded=[Requirement]))
-    print(response.result.text)
+    response = await agent.run("What to do in Boston?").middleware(GlobalTrajectoryMiddleware(included=[Tool]))
+    print(response.answer.text)
 
 
 if __name__ == "__main__":

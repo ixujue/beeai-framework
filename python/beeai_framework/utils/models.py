@@ -13,14 +13,17 @@
 # limitations under the License.
 
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from contextlib import suppress
 from logging import Logger
 from typing import Any, Literal, Optional, TypeVar, Union
 
-from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, create_model
+from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, RootModel, create_model
+from pydantic.fields import FieldInfo
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, SchemaValidator
+
+from beeai_framework.utils.dicts import remap_key
 
 logger = Logger(__name__)
 
@@ -61,6 +64,12 @@ class JSONSchemaModel(ABC, BaseModel):
         arbitrary_types_allowed=False, validate_default=True, json_schema_mode_override="validation"
     )
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if args and not kwargs and type(self).model_fields.keys() == {"root"}:
+            kwargs["root"] = args[0]
+
+        super().__init__(**kwargs)
+
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
@@ -84,38 +93,58 @@ class JSONSchemaModel(ABC, BaseModel):
 
         fields: dict[str, tuple[type, Any]] = {}
         required = set(schema.get("required", []))
-        properties = schema.get("properties", {})
 
-        for param_name, param in properties.items():
-            target_type: type | Any = type_mapping.get(param.get("type"))
+        def create_field(param_name: str, param: dict[str, Any]) -> tuple[type, Any]:
             is_optional = param_name not in required
-            if is_optional:
-                target_type = Optional[target_type] if target_type else type(None)  # noqa: UP007
-
-            if isinstance(param.get("const"), str):
-                target_type = Literal[param["const"]]
-            if not target_type:
-                logger.debug(
-                    f"{JSONSchemaModel.__name__}: Can't resolve a correct type for '{param_name}' attribute."
-                    f" Using 'Any' as a fallback."
-                )
-                target_type = type
-
-            if target_type is dict:
-                target_type = cls.create(param_name, param)
-
-            fields[param_name] = (
-                target_type,
-                Field(
-                    description=param.get("description"),
-                    default=None if is_optional else param["const"] if param.get("const") else ...,
-                ),
+            target_field = Field(
+                description=param.get("description"),
+                default=None if is_optional else param["const"] if param.get("const") else ...,
             )
 
+            if "oneOf" in param:
+                logger.debug(
+                    f"{JSONSchemaModel.__name__}: does not support 'oneOf' modifier found in {param_name} attribute."
+                    f" Will use 'anyOf' instead."
+                )
+                return create_field(param_name, remap_key(param, source="oneOf", target="anyOf"))
+
+            if "anyOf" in param:
+                target_types: list[type] = [create_field(f"option_{i}", t)[0] for i, t in enumerate(param["anyOf"])]
+                if len(target_types) == 1:
+                    return create_field(param_name, remap_key(param, source="anyOf", target="type"))
+                else:
+                    return Union[*target_types], target_field  # type: ignore
+            else:
+                target_type: type | Any = type_mapping.get(param.get("type"))  # type: ignore[arg-type]
+                if is_optional:
+                    target_type = Optional[target_type] if target_type else type(None)  # noqa: UP007
+
+                if isinstance(param.get("const"), str):
+                    target_type = Literal[param["const"]]
+                if not target_type:
+                    logger.debug(
+                        f"{JSONSchemaModel.__name__}: Can't resolve a correct type for '{param_name}' attribute."
+                        f" Using 'Any' as a fallback."
+                    )
+                    target_type = type
+
+                if target_type is dict:
+                    target_type = cls.create(param_name, param)
+
+            return (
+                target_type,
+                target_field,
+            )
+
+        properties = schema.get("properties", {})
+        if not properties:
+            properties["root"] = schema
+
+        for param_name, param in properties.items():
+            fields[param_name] = create_field(param_name, param)
+
         model: type[JSONSchemaModel] = create_model(  # type: ignore
-            schema_name,
-            **fields,
-            __base__=cls,
+            schema_name, **fields, __base__=cls
         )
         model._custom_json_schema = schema
         return model
@@ -128,3 +157,23 @@ def update_model(target: T, *, sources: list[T | None | bool], exclude_unset: bo
 
         for k, v in source.model_dump(exclude_unset=exclude_unset, exclude_defaults=True).items():
             setattr(target, k, v)
+
+
+class ListModel(RootModel[list[T]]):
+    root: list[T]
+
+    def __iter__(self) -> Generator[tuple[str, T], None, None]:
+        for i, item in enumerate(self.root):
+            yield str(i), item
+
+    def __getitem__(self, item: int) -> T:
+        return self.root[item]
+
+
+def to_list_model(target: type[T], field: FieldInfo | None = None) -> type[ListModel[T]]:
+    field = field or Field(...)
+
+    class CustomListModel(ListModel[target]):  # type: ignore
+        root: list[target] = field  # type: ignore
+
+    return CustomListModel
