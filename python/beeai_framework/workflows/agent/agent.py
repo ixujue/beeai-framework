@@ -1,16 +1,5 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 import random
 import string
@@ -20,7 +9,8 @@ from typing import Any, Self, overload
 from pydantic import BaseModel, InstanceOf
 
 from beeai_framework.agents.base import AnyAgent
-from beeai_framework.agents.experimental import RequirementAgent
+from beeai_framework.agents.experimental import RequirementAgent, RequirementAgentRunOutput
+from beeai_framework.agents.tool_calling import ToolCallingAgentRunOutput
 from beeai_framework.agents.tool_calling.agent import ToolCallingAgent
 from beeai_framework.agents.tool_calling.utils import ToolCallCheckerConfig
 from beeai_framework.agents.types import (
@@ -156,9 +146,13 @@ class AgentWorkflow:
             run_input = state.inputs.pop(0).model_copy() if state.inputs else AgentWorkflowInput()
             state.current_input = run_input
             agent = await create_agent(memory.as_read_only())
-            run_output = await agent.run(**run_input.model_dump(), execution=execution)
+            run_output: ToolCallingAgentRunOutput | RequirementAgentRunOutput = await agent.run(
+                **run_input.model_dump(), execution=execution
+            )
 
-            state.final_answer = run_output.result.text
+            state.final_answer = (
+                run_output.result.text if isinstance(run_output, ToolCallingAgentRunOutput) else run_output.answer.text
+            )
             if run_input.prompt:
                 state.new_messages.append(UserMessage(run_input.prompt))
             state.new_messages.extend(run_output.memory.messages[-2:])

@@ -1,17 +1,5 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+# SPDX-License-Identifier: Apache-2.0
 
 from datetime import UTC, datetime
 from typing import Self
@@ -77,6 +65,7 @@ IMPORTANT: The facts mentioned in the final answer must be backed by evidence pr
 
 # Tools
 You must use a tool to retrieve factual or historical information.
+Never use the tool twice with the same input if not stated otherwise.
 
 {{#tools.0}}
 {{#tools}}
@@ -94,6 +83,7 @@ Allowed: {{allowed}}
 - Always take it one step at a time. Don't try to do multiple things at once.
 - When the tool doesn't give you what you were asking for, you must either use another tool or a different tool input.
 - You should always try a few different approaches before declaring the problem unsolvable.
+- If you can't fully answer the user's question, answer partially and describe what you couldn't achieve.
 - You cannot do complex calculations, computations, or data manipulations without using tools.
 - The current date and time is: {{formatDate}}
 {{#notes}}
@@ -122,9 +112,7 @@ This is the expected criteria for your output:
 {{.}}
 
 {{/expected_output}}
-
-Your task: {{prompt}}
-""",
+Your task: {{prompt}}""",
     )
 )
 
@@ -143,20 +131,6 @@ RequirementAgentToolErrorPrompt = PromptTemplate(
 )
 
 
-class RequirementAgentCycleDetectionPromptInput(BaseModel):
-    tool_name: str
-    tool_args: str
-    final_answer_name: str
-
-
-RequirementAgentCycleDetectionPrompt = PromptTemplate(
-    PromptTemplateInput(
-        schema=RequirementAgentCycleDetectionPromptInput,
-        template="""I can't see your answer. You must use the '{{final_answer_name}}' tool to send me a message.""",
-    )
-)
-
-
 class RequirementAgentToolNoResultTemplateInput(BaseModel):
     tool_call: ToolInvocationResult
 
@@ -164,6 +138,6 @@ class RequirementAgentToolNoResultTemplateInput(BaseModel):
 RequirementAgentToolNoResultPrompt = PromptTemplate(
     PromptTemplateInput(
         schema=RequirementAgentToolNoResultTemplateInput,
-        template="""No results were found! Try to reformulate your query.""",
+        template="""No results were found! Try to reformulate your query or use a different tool.""",
     )
 )

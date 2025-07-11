@@ -1,17 +1,5 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+# SPDX-License-Identifier: Apache-2.0
 
 import os
 from abc import ABC
@@ -22,9 +10,11 @@ import litellm
 from litellm import aembedding
 from litellm.litellm_core_utils.get_supported_openai_params import get_supported_openai_params
 from litellm.types.utils import EmbeddingResponse
+from typing_extensions import Unpack
 
 from beeai_framework.adapters.litellm.utils import litellm_debug
 from beeai_framework.backend import EmbeddingModel
+from beeai_framework.backend.embedding import EmbeddingModelKwargs
 from beeai_framework.backend.types import EmbeddingModelInput, EmbeddingModelOutput, EmbeddingModelUsage
 from beeai_framework.context import RunContext
 from beeai_framework.logger import Logger
@@ -42,9 +32,9 @@ class LiteLLMEmbeddingModel(EmbeddingModel, ABC):
         model_id: str,
         *,
         provider_id: str,
-        **kwargs: dict[str, Any],
+        **kwargs: Unpack[EmbeddingModelKwargs],
     ) -> None:
-        self._settings: dict[str, Any] = kwargs
+        super().__init__(**kwargs)
         self._model_id = model_id
         self._litellm_provider_id = provider_id
         self.supported_params = get_supported_openai_params(model=self.model_id, custom_llm_provider=provider_id) or []
@@ -70,7 +60,7 @@ class LiteLLMEmbeddingModel(EmbeddingModel, ABC):
 
     def _transform_input(self, model_input: EmbeddingModelInput) -> dict[str, Any]:
         return {
-            "model": f"{self.provider_id}/{self._model_id}",
+            "model": f"{self._litellm_provider_id}/{self._model_id}",
             "input": model_input.values,
             **self._settings,
         }

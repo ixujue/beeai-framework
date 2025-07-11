@@ -1,19 +1,8 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
-
-from typing import Any
+from types import NoneType
+from typing import Any, Literal, Optional
 
 import pytest
 from pydantic import ValidationError
@@ -31,9 +20,10 @@ def test_json_schema() -> dict[str, list[str] | str | Any]:
         "title": "User",
         "type": "object",
         "properties": {
+            "object": {"const": "user"},
             "name": {"type": "string"},
             "age": {"type": "integer"},
-            "is_active": {"type": "boolean"},
+            "is_active": {"type": "boolean", "default": True},
             "address": {
                 "type": "object",
                 "properties": {
@@ -43,8 +33,10 @@ def test_json_schema() -> dict[str, list[str] | str | Any]:
                 },
             },
             "roles": {"type": "array", "items": {"type": "string", "enum": ["admin", "user", "guest"]}},
+            "hobby": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": None, "title": "An Arg"},
+            "contact": {"oneOf": [{"type": "string"}, {"type": "integer"}]},
         },
-        "required": ["name", "age"],
+        "required": ["name", "age", "contact"],
     }
 
 
@@ -58,9 +50,77 @@ def test_json_schema_model(test_json_schema: dict[str, list[str] | str | Any]) -
     model = JSONSchemaModel.create("test_schema", test_json_schema)
     assert model.model_json_schema()
 
-    # should throw exception if required fields are missing
-    with pytest.raises(ValidationError):  # No description provided
+    with pytest.raises(ValidationError):
         model.model_validate({"name": "aaa"})
 
+    with pytest.raises(ValidationError):
+        model.model_validate({"name": "aaa", "age": []})
+
+    with pytest.raises(ValidationError):
+        model.model_validate({"name": "aaa", "age": 123, "hobby": 123})
+
     # should not fail if optional fields are not included
-    assert model.model_validate({"name": "aaa", "age": 25})
+    assert model.model_validate({"name": "aaa", "age": 25, "contact": 123456789})
+    assert model.model_validate({"name": "aaa", "age": 25, "hobby": "cycling", "contact": "name@email.com"})
+    assert model.model_validate({"name": "aaa", "age": 25, "hobby": None, "contact": "name@email.com"})
+    assert model.model_validate(
+        {"name": "aaa", "age": 25, "hobby": "cycling", "contact": "name@email.com"}
+    ).model_dump() == {
+        "object": "user",
+        "address": None,
+        "age": 25,
+        "hobby": "cycling",
+        "is_active": True,
+        "name": "aaa",
+        "roles": None,
+        "contact": "name@email.com",
+    }
+
+    assert model.model_fields["object"].annotation is Literal["user"], "Expected annotation to be `Literal['user']`"  # type: ignore
+    assert model.model_fields["name"].annotation is str, "Expected annotation to be `str`"
+    assert model.model_fields["age"].annotation is int, "Expected annotation to be `int`"
+    assert model.model_fields["is_active"].annotation is bool, "Expected annotation to be `bool`"
+    # ruff: noqa: UP007, E501
+    assert model.model_fields["roles"].annotation is Optional[list[Literal[("admin", "user", "guest")]]], (  # type: ignore
+        "Expected correct type"
+    )
+    assert model.model_fields["hobby"].annotation == str | NoneType, "Expected annotation to be `Optional[str]`"
+    assert model.model_fields["contact"].annotation == str | int, "Expected annotation to be `Union[str, int]`"
+
+
+@pytest.mark.unit
+def test_preserve_default_type_not_optional() -> None:
+    """
+    Regression test for incorrect annotation of defaulted fields.
+
+    Ensures that fields with a default value (but no explicit nullability)
+    are treated as non-optional, with the correct type and preserved metadata.
+    """
+    json_schema = {
+        "title": "great_toolArguments",
+        "type": "object",
+        "properties": {
+            "an_arg": {
+                "type": "string",
+                "default": "default string",
+                "description": "great description",
+                "title": "An Arg",
+            }
+        },
+        "required": [],
+    }
+
+    model = JSONSchemaModel.create("great_toolArguments", json_schema)
+    field_info = model.model_fields["an_arg"]
+
+    # should not wrap type in Optional
+    assert field_info.annotation is str, "Expected annotation to be `str`, not `Optional[str]`"
+
+    # should preserve the default value
+    assert field_info.default == "default string", "Expected default value to be 'default string'"
+
+    # should preserve the description
+    assert field_info.description == "great description", "Expected description to be 'great description'"
+
+    # should not mark the field as required
+    assert not field_info.is_required(), "Expected field to be optional due to default value"

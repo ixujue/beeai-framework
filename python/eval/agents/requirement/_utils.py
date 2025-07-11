@@ -1,3 +1,6 @@
+# Copyright 2025 © BeeAI a Series of LF Projects, LLC
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import Any, TypeVar
 
 from deepeval.test_case import ConversationalTestCase, LLMTestCase, ToolCall
@@ -41,7 +44,7 @@ def tool_to_tool_call(
 async def run_agent(agent: RequirementAgent, test_case: LLMTestCase) -> None:
     response = await agent.run(prompt=test_case.input)
     test_case.tools_called = []
-    test_case.actual_output = response.result.text
+    test_case.actual_output = response.answer.text
     for index, step in enumerate(response.state.steps):
         if not step.tool:
             continue

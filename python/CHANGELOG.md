@@ -1,3 +1,98 @@
+## python_v0.1.30 (2025-07-09)
+
+### Bug Fixes
+
+- **internals**: handle optional fields and types correctly in MCP JSON schema parsing (#902)
+- **backend**: add missing usage data during streaming (#910)
+- **tools**: fix session in MCP tool (#901)
+- **adapters**: prevent duplicate registration on module reload
+- **adapters**: ACP invalid type
+
+### Features
+
+- **tools**: allow to disable SSL proxy verify in DDG
+- **adapters**: add async serve version for ACP (#914)
+- switch to Mise (#908)
+- **adapters**: adding Groq adapter embedding and modifiying associated docs (#907)
+- **tools**: allow proxy to be set via environment variable in DDG
+- **adapters**: update A2A integration
+- **adapters**: add RequirementAgent support for A2A
+
+## python_v0.1.29 (2025-07-02)
+
+### Bug Fixes
+
+- acp-sdk import
+
+## python_v0.1.28 (2025-07-02)
+
+### Bug Fixes
+
+- **adapters**: handle result of the RequirementAgent
+
+## python_v0.1.27 (2025-07-01)
+
+### Bug Fixes
+
+- put back accidental changes
+- resolve CI failures for PR
+- **adapters**: agent's return type in the A2AServer
+- **adapters**: agent's return type in the ACPServer
+- **agents**: add 'result' field to RequirementAgent's output for backward compatibility
+
+### Features
+
+- **adapters**: add IBM watsonx Orchestrate integration (#897)
+- add support for oneOf/anyOf modifiers in the JSONSchemaModel (#896)
+
+## python_v0.1.26 (2025-06-26)
+
+### Bug Fixes
+
+- **agents**: remove extra new lines in the system prompt (RequirementAgent)
+- **backend**: remove non-supported tool choice for strict environments
+- set value for aliases in embedding model (#888)
+
+### Features
+
+- **adapters**: add Mistral AI backend provider
+- **tools**: switch to httpx from requests in OpenMeteoTool, add proxy support
+- **tools**: update description of the ThinkTool
+- **tools**: ignore case sensitivity for OpenMeteoTool's temperature_unit parameter
+- **tools**: update description of the WikipediaTool
+- **agents**: update cycle prevention mechanism
+- **adapters**: update ACP
+- **backend**: allow to set headers for Ollama via ENV
+- update logging in TrajectoryMiddleware
+
+## python_v0.1.25 (2025-06-13)
+
+### Bug Fixes
+
+- **internals**: correctly abort tasks
+- **agents**: correctly handle the 'force_at_step' argument in ConditionalRequirement
+- properly invoke sync and async callbacks in runs (#883)
+
+### Features
+
+- add context dependent IO support (#886)
+- **agents**: update RequirementAgent system prompt
+- **internals**: execute sync callbacks in threads
+- **agents**: add 'force_prevent_stop' attribute to ConditionalRequirement
+- **agents**: update the behaviour of 'forced' attribute in RequirementAgent
+- **tools**: simplify the Wikipedia tool
+- **backend**: add text completion support for OpenAI (#871)
+- add middleware arg to the core modules (#880)
+
+## python_v0.1.24 (2025-06-08)
+
+### Features
+
+- **agents**: improve RequirementAgent interfaces, examples, docs (#878)
+- expose watsonx embedding model (#877)
+- **backend**: Support OpenAI embedding models (#873)
+- **agents**: allow RequirementAgent to be exposed via ACP,BeeAIPlatform and A2A
+
 ## python_v0.1.23 (2025-06-03)
 
 ### Bug Fixes

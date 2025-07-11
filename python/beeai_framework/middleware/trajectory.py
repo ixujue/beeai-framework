@@ -1,16 +1,5 @@
 # Copyright 2025 © BeeAI a Series of LF Projects, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 import sys
 from collections.abc import Callable
@@ -19,7 +8,7 @@ from typing import Any, Protocol, runtime_checkable
 from beeai_framework.agents import BaseAgent
 from beeai_framework.agents.experimental.requirements.requirement import Requirement
 from beeai_framework.backend import AnyMessage, ChatModel
-from beeai_framework.context import RunContext, RunContextFinishEvent, RunContextStartEvent, RunMiddleware
+from beeai_framework.context import RunContext, RunContextFinishEvent, RunContextStartEvent, RunMiddlewareProtocol
 from beeai_framework.emitter import EmitterOptions, EventMeta
 from beeai_framework.logger import Logger
 from beeai_framework.tools import Tool
@@ -41,7 +30,7 @@ def logger_to_writeable(logger: Logger) -> Writeable:
     return CustomWriteable()
 
 
-class GlobalTrajectoryMiddleware(RunMiddleware):
+class GlobalTrajectoryMiddleware(RunMiddlewareProtocol):
     def __init__(
         self,
         *,
@@ -123,7 +112,7 @@ class GlobalTrajectoryMiddleware(RunMiddleware):
         if isinstance(target, RunContext):
             target = target.instance
 
-        class_name = type(target).__qualname__
+        class_name = type(target).__name__
 
         prefix = next((v for k, v in self._prefix_by_type.items() if isinstance(target, k)), "")
 
